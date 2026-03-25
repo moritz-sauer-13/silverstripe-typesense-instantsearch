@@ -1,6 +1,6 @@
 <?php
 
-namespace MoritzSauer\Instantsearch;
+namespace MoritzSauer\Instantsearch\Controller;
 
 use MoritzSauer\Instantsearch\Services\TypesenseScopedKeyService;
 use SilverStripe\Control\Controller;

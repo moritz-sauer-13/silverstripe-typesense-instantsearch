@@ -6,4 +6,4 @@ After:
 ---
 SilverStripe\Control\Director:
   rules:
-    'typesense/key': 'MoritzSauer\Instantsearch\TypesenseKeyController'
+    'typesense/key': 'MoritzSauer\Instantsearch\Controller\TypesenseKeyController'
