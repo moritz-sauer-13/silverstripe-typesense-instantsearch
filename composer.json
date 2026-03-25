@@ -1,0 +1,31 @@
+{
+  "name": "moritz-sauer-13/silverstripe-typesense-instantsearch",
+  "description": "Reusable Typesense scoped-key ACL and InstantSearch core integration for Silverstripe projects",
+  "type": "silverstripe-vendormodule",
+  "license": "BSD-3-Clause",
+  "version": "1.0.0",
+  "require": {
+    "php": "^8.1",
+    "silverstripe/framework": "^6",
+    "elliotsawyer/silverstripe-typesense": "^2.0@RC",
+    "cweagans/composer-patches": "^2"
+  },
+  "autoload": {
+    "classmap": [
+      "src/"
+    ]
+  },
+  "extra": {
+    "expose": [
+      "client/javascript"
+    ],
+    "patches": {
+      "elliotsawyer/silverstripe-typesense": [
+        {
+          "description": "Fix DocumentUpdate class checks and sync versioned records only on live writes",
+          "url": "typesense-search/patches/elliotsawyer-silverstripe-typesense-document-update-live-sync.patch"
+        }
+      ]
+    }
+  }
+}

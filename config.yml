@@ -1,0 +1,19 @@
+---
+Name: typesense-search-module
+After:
+  - '#project'
+---
+DNADesign\Elemental\Models\BaseElement:
+  extensions:
+    - MoritzSauer\Instantsearch\Extensions\BaseElementSearchVisibilityExtension
+
+ElliotSawyer\SilverstripeTypesense\Collection:
+  extensions:
+    - MoritzSauer\Instantsearch\Extensions\TypesenseCollectionExtension
+
+SilverStripe\Core\Injector\Injector:
+  Psr\SimpleCache\CacheInterface.TypesenseScopedKeyCache:
+    factory: SilverStripe\Core\Cache\CacheFactory
+    constructor:
+      namespace: "TypesenseScopedKey"
+      defaultLifetime: 3300

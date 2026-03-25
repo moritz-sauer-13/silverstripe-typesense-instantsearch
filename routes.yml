@@ -1,0 +1,9 @@
+---
+Name: typesense-search-module-routes
+After:
+  - '#rootroutes'
+  - '#coreroutes'
+---
+SilverStripe\Control\Director:
+  rules:
+    'typesense/key': 'MoritzSauer\Instantsearch\TypesenseKeyController'
