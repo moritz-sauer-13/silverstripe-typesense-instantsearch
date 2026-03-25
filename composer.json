@@ -3,9 +3,7 @@
   "description": "Reusable Typesense scoped-key ACL, InstantSearch core, and integrated Silverstripe Typesense backend for Silverstripe projects",
   "type": "silverstripe-vendormodule",
   "license": "LGPL-3.0-or-later",
-  "version": "1.0.0",
   "require": {
-    "php": "^8.1",
     "silverstripe/framework": "^6",
     "typesense/typesense-php": "^6",
     "php-http/curl-client": "^2.4",
