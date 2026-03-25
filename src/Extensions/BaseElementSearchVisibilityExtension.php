@@ -12,7 +12,6 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDate;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\FieldType\DBTime;
-use function SilverStripe\Core\i18n\_t;
 
 class BaseElementSearchVisibilityExtension extends Extension
 {
