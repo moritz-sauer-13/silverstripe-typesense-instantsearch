@@ -1,5 +1,7 @@
 # Silverstripe Typesense Search Module
 
+> Hinweis: Dieses Modul ist eine Erweiterung auf Basis von Elliots Modul `elliotsawyer/silverstripe-typesense`. Die Kernfunktionalitaet wurde vollstaendig in dieses Modul integriert.
+
 Dieses Modul kapselt die wiederverwendbaren Bausteine fuer eine sichere Typesense-Suche mit Scoped Keys, ACL-Filtern und zentralem InstantSearch-Core.
 
 ## Was das Modul liefert
@@ -10,7 +12,7 @@ Dieses Modul kapselt die wiederverwendbaren Bausteine fuer eine sichere Typesens
 - Trait/Extensions fuer konsistenten Dokumentbau und Link-Sanitizing
 - BaseElement-Integration mit Visibility-Vererbung von der Parent-Seite
 - Setup-Task fuer ACL-Felder in allen Typesense-Collections
-- Patch fuer `elliotsawyer/silverstripe-typesense` (Live/Stage-Sync im DocumentUpdate)
+- integriertes Typesense-Backend auf Basis von Elliot Sawyer (inkl. Live/Stage-Sync-Logik im `DocumentUpdate`)
 - zentraler JS-Core: `client/javascript/instantsearch-core.js`
 
 Hinweis: Projektspezifische Widgets/Skripte (z. B. Blog-, Event-, Defect-Suche) bleiben absichtlich im Projekt.
@@ -19,19 +21,16 @@ Hinweis: Projektspezifische Widgets/Skripte (z. B. Blog-, Event-, Defect-Suche) 
 
 Dieses Modul zieht die zentralen Pakete selbst:
 
-- `elliotsawyer/silverstripe-typesense`
-- `cweagans/composer-patches`
-
-Der Patch liegt im Modul unter:
-
-- `typesense-search/patches/elliotsawyer-silverstripe-typesense-document-update-live-sync.patch`
+- `typesense/typesense-php`
+- `php-http/curl-client`
+- `symbiote/silverstripe-queuedjobs`
+- `symbiote/silverstripe-multivaluefield`
+- `symbiote/silverstripe-gridfieldextensions`
 
 ## Installation (Projekt)
 
 1. Modul als Composer-Dependency einbinden.
-2. Sicherstellen, dass Composer-Plugins erlaubt sind:
-   - `cweagans/composer-patches`
-3. Composer laufen lassen.
+2. Composer laufen lassen.
 
 Beispiel fuer lokales Path-Repository:
 
@@ -40,17 +39,12 @@ Beispiel fuer lokales Path-Repository:
   "repositories": [
     {
       "type": "path",
-      "url": "typesense-search",
+      "url": "silverstripe-typesense-instantsearch",
       "options": { "symlink": true }
     }
   ],
   "require": {
-    "moritz-sauer-13/silverstripe-typesense-search": "*"
-  },
-  "config": {
-    "allow-plugins": {
-      "cweagans/composer-patches": true
-    }
+    "moritz-sauer-13/silverstripe-typesense-instantsearch": "*"
   }
 }
 ```
@@ -58,9 +52,7 @@ Beispiel fuer lokales Path-Repository:
 Dann:
 
 ```bash
-composer update moritz-sauer-13/silverstripe-typesense-search --with-all-dependencies
-composer patches-relock
-composer patches-repatch
+composer update moritz-sauer-13/silverstripe-typesense-instantsearch --with-all-dependencies
 ```
 
 ## Umgebungsvariablen
@@ -85,9 +77,12 @@ Empfehlung:
 
 Das Modul registriert automatisch:
 
+- `ElliotSawyer\SilverstripeTypesense\DocumentUpdate` auf `SilverStripe\ORM\DataObject`
 - `MoritzSauer\Instantsearch\Extensions\BaseElementSearchVisibilityExtension` auf `DNADesign\Elemental\Models\BaseElement`
 - `MoritzSauer\Instantsearch\Extensions\TypesenseCollectionExtension` auf `ElliotSawyer\SilverstripeTypesense\Collection`
-- Route `typesense/key` auf `MoritzSauer\Instantsearch\TypesenseKeyController`
+- Route `_typesense` auf `ElliotSawyer\SilverstripeTypesense\Typesense`
+- Route `typesense/key` auf `MoritzSauer\Instantsearch\Controller\TypesenseKeyController`
+- Cache `Psr\SimpleCache\CacheInterface.TypesenseCache`
 - Cache `Psr\SimpleCache\CacheInterface.TypesenseScopedKeyCache`
 
 Optional vorhanden, aber nicht automatisch aktiviert:
@@ -147,7 +142,7 @@ Reihenfolge:
 1. `typesense-instantsearch-adapter`
 2. `instantsearch.js`
 3. Modul-Core:
-   - `moritz-sauer-13/silverstripe-typesense-search:client/javascript/instantsearch-core.js`
+   - `moritz-sauer-13/silverstripe-typesense-instantsearch:client/javascript/instantsearch-core.js`
 4. seiten-spezifisches Suchskript
 
 ### 3) Search Client aufbauen
@@ -181,7 +176,7 @@ Voraussetzung:
 - Request-Filter aus dem Widget sind nur zusaetzliche Einschraenkung.
   Der ACL-Filter aus dem Scoped Key bleibt immer aktiv.
 - Nach Visibility-Aenderungen reindizieren.
-- Fuer versionierte Inhalte auf Live-Workflow achten (Patch ist im Modul enthalten).
+- Fuer versionierte Inhalte auf Live-Workflow achten (die Live/Stage-Sync-Logik ist direkt im integrierten `DocumentUpdate` enthalten).
 
 ## Troubleshooting
 

@@ -1,0 +1,6 @@
+---
+Name: typesense-search-module-extensions
+---
+SilverStripe\ORM\DataObject:
+  extensions:
+    - ElliotSawyer\SilverstripeTypesense\DocumentUpdate

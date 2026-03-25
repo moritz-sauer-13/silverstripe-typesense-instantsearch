@@ -6,4 +6,9 @@ After:
 ---
 SilverStripe\Control\Director:
   rules:
+    '_typesense': 'ElliotSawyer\SilverstripeTypesense\Typesense'
     'typesense/key': 'MoritzSauer\Instantsearch\Controller\TypesenseKeyController'
+ElliotSawyer\SilverstripeTypesense\Typesense:
+  allowed_actions:
+    - license
+    - attribution_notice

@@ -3,15 +3,42 @@
 namespace MoritzSauer\Instantsearch\Extensions;
 
 use MoritzSauer\Instantsearch\Services\SearchVisibilityService;
+use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Extension;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Forms\CheckboxField;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDate;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\FieldType\DBTime;
+use function SilverStripe\Core\i18n\_t;
 
 class BaseElementSearchVisibilityExtension extends Extension
 {
+    private static array $db = [
+        'ShowInSearch' => 'Boolean(1)',
+    ];
+
+    private static array $defaults = [
+        'ShowInSearch' => 1,
+    ];
+
+    public function updateCMSFields(FieldList $fields): void
+    {
+        $showInSearchField = CheckboxField::create(
+            'ShowInSearch',
+            _t(SiteTree::class . '.SHOWINSEARCH', 'Show in search?')
+        );
+
+        if ($fields->fieldByName('Root.Settings')) {
+            $fields->addFieldToTab('Root.Settings', $showInSearchField, 'ExtraClass');
+            return;
+        }
+
+        $fields->addFieldToTab('Root.Main', $showInSearchField);
+    }
+
     public function getTypesenseDocument(array $fields = []): array
     {
         $owner = $this->getOwner();
@@ -114,12 +141,17 @@ class BaseElementSearchVisibilityExtension extends Extension
         /** @var SearchVisibilityService $visibility */
         $visibility = Injector::inst()->get(SearchVisibilityService::class);
 
+        $ownerIsVisible = $visibility->isSearchVisible($this->getOwner());
+        if (!$ownerIsVisible) {
+            return false;
+        }
+
         $parent = $this->getVisibilityParentRecord();
         if ($parent instanceof DataObject) {
             return $visibility->isSearchVisible($parent);
         }
 
-        return $visibility->isSearchVisible($this->getOwner());
+        return true;
     }
 
     private function sanitizeSearchLink(string $link): string

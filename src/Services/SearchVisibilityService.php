@@ -78,11 +78,20 @@ class SearchVisibilityService
 
     public function isSearchVisible(DataObject $record): bool
     {
-        if ($record->hasMethod('isFrontendSearchVisible')) {
-            return (bool)$record->isFrontendSearchVisible();
+        $visible = true;
+
+        if ($record->hasField('ShowInSearch')) {
+            $showInSearch = $record->getField('ShowInSearch');
+            if ($showInSearch !== null && $showInSearch !== '') {
+                $visible = $visible && (bool)$showInSearch;
+            }
         }
 
-        return true;
+        if ($record->hasMethod('isFrontendSearchVisible')) {
+            $visible = $visible && (bool)$record->isFrontendSearchVisible();
+        }
+
+        return $visible;
     }
 
     /**
