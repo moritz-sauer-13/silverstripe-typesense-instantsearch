@@ -4,12 +4,13 @@
   "type": "silverstripe-vendormodule",
   "license": "LGPL-3.0-or-later",
   "require": {
-    "silverstripe/framework": "^6",
-    "typesense/typesense-php": "^6",
-    "php-http/curl-client": "^2.4",
-    "symbiote/silverstripe-queuedjobs": "^6",
-    "symbiote/silverstripe-multivaluefield": "^7",
-    "symbiote/silverstripe-gridfieldextensions": "^5"
+    "php": "^7.4 || ^8.0",
+    "silverstripe/framework": "^4.13",
+    "typesense/typesense-php": "~4.8.7",
+    "php-http/curl-client": "~2.3.0",
+    "symbiote/silverstripe-queuedjobs": "^4.12",
+    "symbiote/silverstripe-multivaluefield": "^5.4",
+    "symbiote/silverstripe-gridfieldextensions": "^3.6"
   },
   "autoload": {
     "classmap": [

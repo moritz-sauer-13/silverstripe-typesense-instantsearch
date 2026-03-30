@@ -69,15 +69,22 @@ final class Typesense extends Controller
     {
         $server = Environment::getEnv('TYPESENSE_SERVER') ?? '';
         $parts = parse_url($server);
-        return count($parts) == 3 ? $parts : [];
+        if (!is_array($parts)) {
+            return [];
+        }
+
+        return isset($parts['scheme'], $parts['host']) ? $parts : [];
     }
 
     public function license(HTTPRequest $request): HTTPResponse
     {
         $licenseContent = 'Unable to load license';
-        $manifest = ModuleLoader::inst()?->getManifest();
-        $module = $manifest?->getModule('moritz-sauer-13/silverstripe-typesense-instantsearch')
-            ?: $manifest?->getModule('elliotsawyer/silverstripe-typesense');
+        $manifest = ModuleLoader::inst()->getManifest();
+        $module = null;
+        if ($manifest) {
+            $module = $manifest->getModule('moritz-sauer-13/silverstripe-typesense-instantsearch')
+                ?: $manifest->getModule('elliotsawyer/silverstripe-typesense');
+        }
         if ($module instanceof Module) {
             $path = realpath($module->getPath());
             $license = $path . DIRECTORY_SEPARATOR . 'LICENSE.md';

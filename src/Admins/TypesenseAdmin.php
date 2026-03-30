@@ -43,7 +43,7 @@ class TypesenseAdmin extends ModelAdmin implements PermissionProvider
         ];
     }
 
-    public function getGridfieldConfig(): GridFieldConfig
+    public function getGridFieldConfig(): GridFieldConfig
     {
         $cfg = parent::getGridFieldConfig();
         if ($this->modelClass == Collection::class) {

@@ -7,7 +7,6 @@
 
 namespace ElliotSawyer\SilverstripeTypesense;
 
-use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\NumericField;
@@ -135,7 +134,7 @@ class Field extends DataObject
         return $fields;
     }
 
-    public function validate(): ValidationResult
+    public function validate(): \SilverStripe\Core\Validation\ValidationResult
     {
         $valid = parent::validate();
         if (!in_array($this->type, $this->config()->field_types)) {
@@ -152,7 +151,7 @@ class Field extends DataObject
     {
         $field = Field::get()->filter($fieldDefinition + ['CollectionID' => $parentID])->first()
             ?: Field::create($fieldDefinition + ['CollectionID' => $parentID]);
-        if (!$field?->ID) {
+        if (!$field->ID) {
             $field->write();
         }
 

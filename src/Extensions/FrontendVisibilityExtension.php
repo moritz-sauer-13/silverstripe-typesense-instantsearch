@@ -17,6 +17,8 @@ use SilverStripe\Security\Security;
 
 class FrontendVisibilityExtension extends Extension
 {
+    private const ONLY_THESE_MEMBERS = 'OnlyTheseMembers';
+
     private static array $db = [
         'CanViewType' => "Enum('Anyone,LoggedInUsers,OnlyTheseUsers,OnlyTheseMembers,Inherit', 'Anyone')",
     ];
@@ -44,7 +46,7 @@ class FrontendVisibilityExtension extends Extension
                 InheritedPermissions::ANYONE => 'Jeder',
                 InheritedPermissions::LOGGED_IN_USERS => 'Nur eingeloggte Nutzer',
                 InheritedPermissions::ONLY_THESE_USERS => 'Nur diese Gruppen',
-                InheritedPermissions::ONLY_THESE_MEMBERS => 'Nur diese Mitglieder',
+                self::ONLY_THESE_MEMBERS => 'Nur diese Mitglieder',
                 InheritedPermissions::INHERIT => 'Vererben',
             ])->setDescription('Diese Einstellung steuert Frontend-Sichtbarkeit und Search-ACL in Typesense.'),
             ListboxField::create('ViewerGroups', 'Erlaubte Gruppen', $groupOptions)
@@ -86,7 +88,7 @@ class FrontendVisibilityExtension extends Extension
                 }
                 return $member->inGroups($source->ViewerGroups());
 
-            case InheritedPermissions::ONLY_THESE_MEMBERS:
+            case self::ONLY_THESE_MEMBERS:
                 if (!$member instanceof Member || !$source->hasMethod('ViewerMembers')) {
                     return false;
                 }
@@ -155,7 +157,7 @@ class FrontendVisibilityExtension extends Extension
 
         if ($parent->hasMethod('canView') && !$parent->canView()) {
             return [
-                'type' => InheritedPermissions::ONLY_THESE_MEMBERS,
+                'type' => self::ONLY_THESE_MEMBERS,
                 'source' => $owner,
             ];
         }

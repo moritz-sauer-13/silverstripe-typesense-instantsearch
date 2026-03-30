@@ -8,24 +8,19 @@
 namespace ElliotSawyer\SilverstripeTypesense;
 
 use Exception;
-use LeKoala\CmsActions\ActionButtonsGroup;
-use LeKoala\CmsActions\CustomAction;
-use LeKoala\CmsActions\SilverStripeIcons;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Injector\Injector;
-use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\DropdownField;
+use SilverStripe\Forms\FormAction;
 use SilverStripe\Forms\GridField\GridField;
-use SilverStripe\Forms\GridField\GridField_ActionMenu;
 use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
 use SilverStripe\Forms\ListboxField;
 use SilverStripe\Forms\NumericField;
+use SilverStripe\Forms\RequiredFields;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Forms\TextField;
-use SilverStripe\Forms\Validation\CompositeValidator;
-use SilverStripe\Forms\Validation\RequiredFieldsValidator;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
@@ -102,10 +97,7 @@ class Collection extends DataObject
         $fields = $this->getCMSMainFields($fields);
 
         $fieldsGridfield = $fields->dataFieldByName('Fields') ?? GridField::create('Fields', 'Fields', $this->Fields());
-        $fieldsGridfield->setConfig(
-            GridFieldConfig_RecordEditor::create()
-                ->removeComponentsByType(GridField_ActionMenu::class)
-        );
+        $fieldsGridfield->setConfig(GridFieldConfig_RecordEditor::create());
 
         $synonymsField = $fields->dataFieldByName('Synonyms') ?? GridField::create('Synonyms', 'Synonyms', $this->Synonyms());
         $synonymsField->setConfig(GridFieldConfig_RecordEditor::create());
@@ -170,23 +162,15 @@ class Collection extends DataObject
     {
         $actions = parent::getCMSActions();
 
-        $typesenseActions = [
-            CustomAction::create("syncWithTypesenseServer", _t(Collection::class . '.LABEL_syncWithTypesenseServer', "Update collection in Typesense"))
-                ->removeExtraClass('btn-info')
-                ->addExtraClass('btn-outline-danger')
-                ->setButtonIcon(SilverStripeIcons::ICON_SYNC)
-                ->setConfirmation(_t(Collection::class . '.CONFIRM_syncWithTypesenseServer', 'This action will require a reindex, are you sure you want to continue?')),
-            CustomAction::create("deleteFromTypesenseServer", _t(Collection::class . '.LABEL_deleteFromTypesenseServer', "Delete from Typesense"))
-                ->removeExtraClass('btn-info')
-                ->addExtraClass('btn-outline-danger')
-                ->setButtonIcon(SilverStripeIcons::ICON_TRASH_BIN)
-                ->setConfirmation(_t(Collection::class . '.CONFIRM_deleteFromTypesenseServer', 'You are about to delete your collection, are you sure?'))
-        ];
-
-        $groupAction = ActionButtonsGroup::create($typesenseActions);
-
         if ($this->ID && $this->Fields()->Count() > 0) {
-            $actions->push($groupAction);
+            $actions->push(
+                FormAction::create('syncWithTypesenseServer', _t(Collection::class . '.LABEL_syncWithTypesenseServer', 'Update collection in Typesense'))
+                    ->addExtraClass('btn-outline-danger')
+            );
+            $actions->push(
+                FormAction::create('deleteFromTypesenseServer', _t(Collection::class . '.LABEL_deleteFromTypesenseServer', 'Delete from Typesense'))
+                    ->addExtraClass('btn-outline-danger')
+            );
         }
 
         return $actions;
@@ -317,18 +301,15 @@ class Collection extends DataObject
         $this->deleteFromTypesenseServer();
     }
 
-    public function getCMSCompositeValidator(): CompositeValidator
+    public function getCMSValidator()
     {
-        $validator = parent::getCMSCompositeValidator();
-
-        $validator->addValidator(RequiredFieldsValidator::create([
-            'Name', 'RecordClass'
-        ]));
-
-        return $validator;
+        return RequiredFields::create([
+            'Name',
+            'RecordClass',
+        ]);
     }
 
-    public function validate(): ValidationResult
+    public function validate(): \SilverStripe\Core\Validation\ValidationResult
     {
         $valid = parent::validate();
         if (!class_exists($this->RecordClass)) {

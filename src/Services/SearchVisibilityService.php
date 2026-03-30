@@ -9,6 +9,8 @@ use SilverStripe\Security\Member;
 
 class SearchVisibilityService
 {
+    private const ONLY_THESE_MEMBERS = 'OnlyTheseMembers';
+
     /**
      * @return string[]
      */
@@ -62,7 +64,7 @@ class SearchVisibilityService
                 }
                 return [];
 
-            case InheritedPermissions::ONLY_THESE_MEMBERS:
+            case self::ONLY_THESE_MEMBERS:
                 if ($source->hasMethod('ViewerMembers')) {
                     return array_map(
                         static fn($id): string => 'member_' . $id,

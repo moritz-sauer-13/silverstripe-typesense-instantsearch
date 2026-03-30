@@ -8,46 +8,39 @@
 namespace ElliotSawyer\SilverstripeTypesense;
 
 use SilverStripe\Dev\BuildTask;
-use SilverStripe\PolyExecution\PolyOutput;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
 
 class TypesenseSyncTask extends BuildTask
 {
-    protected static string $commandName = 'TypesenseSyncTask';
+    protected $title = 'Typesense sync task';
+    protected $description = 'Creates and indexes your Typesense collections';
+    private static $segment = 'TypesenseSyncTask';
 
-    public function getTitle(): string
-    {
-        return _t(TypesenseSyncTask::class . '.TITLE', 'Typesense sync task');
-    }
-
-    public static function getDescription(): string
-    {
-        return _t(TypesenseSyncTask::class . '.DESCRIPTION', 'Creates and indexes your Typesense collections');
-    }
-
-    protected function execute(InputInterface $input, PolyOutput $output): int
+    public function run($request)
     {
         $copyright = (new Typesense())->CopyrightStatement();
-        $output->writeln($copyright);
+        $this->writeLine($copyright);
         $this->extend('onBeforeBuildAllCollections');
         $collections = $this->findOrMakeAllCollections();
         $this->extend('onAfterBuildAllCollections', $collections);
-        if (!$collections) {
-            $output->writeln("No collections to build");
-            return Command::INVALID;
+        if (!$collections->exists()) {
+            $this->writeLine('No collections to build');
+            return;
         }
 
         $this->extend('onBeforeImportDocuments');
         foreach ($collections as $collection) {
             if (!$collection->checkExistence()) {
-                $output->writeln($collection->syncWithTypesenseServer());
+                $this->writeLine($collection->syncWithTypesenseServer());
             }
             $collection->import();
         }
         $this->extend('onAfterImportDocuments', $collections);
         $this->extend('onEndOfSyncTask');
-        return Command::SUCCESS;
+    }
+
+    private function writeLine($message)
+    {
+        echo $message . PHP_EOL;
     }
 
     private function findOrMakeAllCollections()

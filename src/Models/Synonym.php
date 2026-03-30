@@ -9,9 +9,7 @@ namespace ElliotSawyer\SilverstripeTypesense;
 
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
-use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\Forms\RequiredFields;
-use SilverStripe\Forms\Validation\CompositeValidator;
 use SilverStripe\ORM\DataObject;
 use Typesense\Exceptions\ObjectNotFound;
 
@@ -93,14 +91,12 @@ class Synonym extends DataObject
         return $fields;
     }
 
-    public function getCMSCompositeValidator(): CompositeValidator
+    public function getCMSValidator()
     {
-        $validator = parent::getCMSCompositeValidator();
-        $validator->addValidator(RequiredFields::create(['synonyms']));
-        return $validator;
+        return RequiredFields::create(['synonyms']);
     }
 
-    public function validate(): ValidationResult
+    public function validate()
     {
         $valid = parent::validate();
         if ($this->TypesenseIdentifier) {
