@@ -309,7 +309,7 @@ class Collection extends DataObject
         ]);
     }
 
-    public function validate(): \SilverStripe\Core\Validation\ValidationResult
+    public function validate(): \SilverStripe\ORM\ValidationResult
     {
         $valid = parent::validate();
         if (!class_exists($this->RecordClass)) {
@@ -370,13 +370,57 @@ class Collection extends DataObject
                 }
             }
 
-            $client->collections[$this->Name]->documents->import($docs, ['action' => 'emplace']);
+            $importResult = $client->collections[$this->Name]->documents->import($docs, ['action' => 'emplace']);
+            $failedDocuments = 0;
+            $firstImportError = '';
+            $importEntries = [];
+            if (is_array($importResult)) {
+                $importEntries = $importResult;
+            } else {
+                foreach (preg_split('/\r\n|\r|\n/', (string)$importResult) as $line) {
+                    $line = trim((string)$line);
+                    if ($line === '') {
+                        continue;
+                    }
+
+                    $entry = json_decode($line, true);
+                    if (is_array($entry)) {
+                        $importEntries[] = $entry;
+                    }
+                }
+            }
+
+            foreach ($importEntries as $entry) {
+                if (array_key_exists('success', $entry) && $entry['success'] === false) {
+                    $failedDocuments++;
+                    if ($firstImportError === '' && !empty($entry['error'])) {
+                        $firstImportError = (string)$entry['error'];
+                    }
+                }
+            }
             DB::alteration_message(
                 '...'
                 . _t(Collection::class . '.IMPORT_AddedDocumentsToCollection', 'added [{limitcount} / {count}] documents to {name}', ['limitcount' => $i + $limitCount, 'count' => $count, 'name' => $this->Name])
             );
+            if ($failedDocuments > 0) {
+                DB::alteration_message(
+                    sprintf('...failed %d documents for %s. First error: %s', $failedDocuments, $this->Name, $firstImportError ?: 'unknown'),
+                    'error'
+                );
+            }
 
             $i += $limit;
+        }
+    }
+
+    public function syncSynonyms(): void
+    {
+        foreach ($this->Synonyms() as $synonym) {
+            if (!$synonym instanceof Synonym || !$synonym->exists()) {
+                continue;
+            }
+
+            $synonym->syncWithTypesenseServer();
         }
     }
 
@@ -396,7 +440,40 @@ class Collection extends DataObject
         if ($this->ExcludedClasses) {
             $excludedClasses = json_decode($this->ExcludedClasses, true);
             if ($excludedClasses) {
-                $records = $records->exclude('ClassName', array_values($excludedClasses));
+                $excludedLookup = [];
+                foreach (array_values($excludedClasses) as $excludedClass) {
+                    $excludedClass = strtolower(trim((string)$excludedClass));
+                    if ($excludedClass !== '') {
+                        $excludedLookup[$excludedClass] = true;
+                    }
+                }
+
+                $classNamesToExclude = [];
+                if ($excludedLookup) {
+                    $candidateClasses = array_unique(array_merge(
+                        [$recordClass],
+                        array_values(ClassInfo::subclassesFor($recordClass, false))
+                    ));
+
+                    foreach ($candidateClasses as $candidateClass) {
+                        $lineage = array_merge(
+                            [$candidateClass],
+                            array_values(class_parents($candidateClass) ?: [])
+                        );
+
+                        foreach ($lineage as $ancestorClass) {
+                            if (isset($excludedLookup[strtolower((string)$ancestorClass)])) {
+                                $classNamesToExclude[] = $candidateClass;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                $classNamesToExclude = array_values(array_unique($classNamesToExclude));
+                if ($classNamesToExclude) {
+                    $records = $records->exclude('ClassName', $classNamesToExclude);
+                }
             }
         }
 
@@ -427,9 +504,109 @@ class Collection extends DataObject
             if ($record->dbObject($name) instanceof DBDate || $record->dbObject($name) instanceof DBTime) {
                 $data[$name] = strtotime($record->$name);
             }
+
+            $data[$name] = $this->normalizeTypesenseFieldValue($data[$name] ?? null, $field);
         }
 
         return $data;
+    }
+
+    private function normalizeTypesenseFieldValue($value, array $field)
+    {
+        $type = strtolower((string)($field['type'] ?? ''));
+        if ($type === '') {
+            return $value;
+        }
+
+        if ($type === 'string') {
+            if ($value === null || $value === '') {
+                return $value;
+            }
+
+            return $this->normalizePlainTextString($value);
+        }
+
+        if ($type === 'bool') {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            if (is_int($value) || is_float($value)) {
+                return ((int)$value) === 1;
+            }
+
+            $normalized = strtolower(trim((string)$value));
+            if ($normalized === '1' || $normalized === 'true' || $normalized === 'yes') {
+                return true;
+            }
+            if ($normalized === '0' || $normalized === 'false' || $normalized === 'no') {
+                return false;
+            }
+
+            return (bool)$value;
+        }
+
+        if ($type === 'int32' || $type === 'int64') {
+            if ($value === null || $value === '') {
+                return null;
+            }
+            return (int)$value;
+        }
+
+        if ($type === 'float') {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            if (is_string($value)) {
+                $value = str_replace(',', '.', $value);
+            }
+
+            return (float)$value;
+        }
+
+        if ($type === 'string[]') {
+            if ($value === null || $value === '') {
+                return [];
+            }
+
+            if (is_array($value)) {
+                $values = array_map(function ($item): string {
+                    return $this->normalizePlainTextString($item);
+                }, $value);
+
+                return array_values(array_filter($values, static function (string $item): bool {
+                    return $item !== '';
+                }));
+            }
+
+            $item = $this->normalizePlainTextString($value);
+
+            return $item === '' ? [] : [$item];
+        }
+
+        return $value;
+    }
+
+    private function normalizePlainTextString($value): string
+    {
+        $text = trim((string)$value);
+        if ($text === '') {
+            return '';
+        }
+
+        $text = preg_replace('/<\s*br\s*\/?\s*>/iu', "\n", $text) ?? $text;
+        $text = preg_replace('/<\s*\/p\s*>/iu', "\n", $text) ?? $text;
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = str_replace("\xc2\xa0", ' ', $text);
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return trim($text);
     }
 
     public function checkExistence()

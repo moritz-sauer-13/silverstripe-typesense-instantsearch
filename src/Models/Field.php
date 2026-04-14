@@ -134,7 +134,7 @@ class Field extends DataObject
         return $fields;
     }
 
-    public function validate(): \SilverStripe\Core\Validation\ValidationResult
+    public function validate(): \SilverStripe\ORM\ValidationResult
     {
         $valid = parent::validate();
         if (!in_array($this->type, $this->config()->field_types)) {

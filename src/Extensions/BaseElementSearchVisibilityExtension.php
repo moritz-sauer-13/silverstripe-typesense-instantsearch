@@ -90,7 +90,7 @@ class BaseElementSearchVisibilityExtension extends Extension
                 $value = $this->sanitizeSearchLink($value);
             }
 
-            $data[$name] = $value;
+            $data[$name] = $this->normalizeTypesenseFieldValue($value, $field);
         }
 
         if (isset($data['Link']) && is_string($data['Link'])) {
@@ -151,6 +151,105 @@ class BaseElementSearchVisibilityExtension extends Extension
         }
 
         return true;
+    }
+
+    private function normalizeTypesenseFieldValue($value, array $field)
+    {
+        $type = strtolower((string)($field['type'] ?? ''));
+        if ($type === '') {
+            return $value;
+        }
+
+        if ($type === 'string') {
+            if ($value === null || $value === '') {
+                return $value;
+            }
+
+            return $this->normalizePlainTextString($value);
+        }
+
+        if ($type === 'bool') {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            if (is_int($value) || is_float($value)) {
+                return ((int)$value) === 1;
+            }
+
+            $normalized = strtolower(trim((string)$value));
+            if ($normalized === '1' || $normalized === 'true' || $normalized === 'yes') {
+                return true;
+            }
+            if ($normalized === '0' || $normalized === 'false' || $normalized === 'no') {
+                return false;
+            }
+
+            return (bool)$value;
+        }
+
+        if ($type === 'int32' || $type === 'int64') {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            return (int)$value;
+        }
+
+        if ($type === 'float') {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            if (is_string($value)) {
+                $value = str_replace(',', '.', $value);
+            }
+
+            return (float)$value;
+        }
+
+        if ($type === 'string[]') {
+            if ($value === null || $value === '') {
+                return [];
+            }
+
+            if (is_array($value)) {
+                $values = array_map(function ($item): string {
+                    return $this->normalizePlainTextString($item);
+                }, $value);
+
+                return array_values(array_filter($values, static function (string $item): bool {
+                    return $item !== '';
+                }));
+            }
+
+            $item = $this->normalizePlainTextString($value);
+
+            return $item === '' ? [] : [$item];
+        }
+
+        return $value;
+    }
+
+    private function normalizePlainTextString($value): string
+    {
+        $text = trim((string)$value);
+        if ($text === '') {
+            return '';
+        }
+
+        $text = preg_replace('/<\s*br\s*\/?\s*>/iu', "\n", $text) ?? $text;
+        $text = preg_replace('/<\s*\/p\s*>/iu', "\n", $text) ?? $text;
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = str_replace("\xc2\xa0", ' ', $text);
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return trim($text);
     }
 
     private function sanitizeSearchLink(string $link): string

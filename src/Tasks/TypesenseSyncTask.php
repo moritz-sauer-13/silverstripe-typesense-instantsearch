@@ -17,6 +17,8 @@ class TypesenseSyncTask extends BuildTask
 
     public function run($request)
     {
+        ini_set('memory_limit', '256M');
+        ini_set('max_execution_time', 3600);
         $copyright = (new Typesense())->CopyrightStatement();
         $this->writeLine($copyright);
         $this->extend('onBeforeBuildAllCollections');
@@ -29,10 +31,11 @@ class TypesenseSyncTask extends BuildTask
 
         $this->extend('onBeforeImportDocuments');
         foreach ($collections as $collection) {
-            if (!$collection->checkExistence()) {
-                $this->writeLine($collection->syncWithTypesenseServer());
-            }
+            // Always recreate each collection before import so removed records/excluded classes
+            // are cleaned up as part of a normal sync run.
+            $this->writeLine($collection->syncWithTypesenseServer());
             $collection->import();
+            $collection->syncSynonyms();
         }
         $this->extend('onAfterImportDocuments', $collections);
         $this->extend('onEndOfSyncTask');
